@@ -7,6 +7,7 @@ import Signup from './components/signup';
 import Dashboard from './components/dashboard';
 import Home from './components/home';
 import Profile from './components/profile';
+import Verify from './components/verify';
 
 const Stack = createStackNavigator();
 
@@ -58,6 +59,10 @@ function MyStack() {
         name="Profile" 
         component={Profile} 
         options={{ title: 'Profile Settings',headerLeft: (navigation) => (<GoToButton screenName="Dashboard"/>)}}
+      />
+      <Stack.Screen 
+        name="Verify" 
+        component={Verify} 
       />
     </Stack.Navigator>
   );

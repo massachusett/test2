@@ -64,7 +64,9 @@ export default class Signup extends Component {
                   dob: String(this.state.dob.getFullYear()).concat("-",this.state.dob.getMonth(),"-",this.state.dob.getDate()),
                   year: this.state.year,
                   house: this.state.house,
-                  gender: this.state.gender
+                  gender: this.state.gender,
+                  referral: '',
+                  referralVerified: false
               })
           }
         }

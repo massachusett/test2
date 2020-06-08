@@ -29,19 +29,21 @@ function FriendsScreen() {
 function SettingsPage({navigation}) {
   user = firebase.auth().currentUser
   if (user) {
-    userId = user.uid;
-    this.state = { 
-      displayName: firebase.auth().currentUser.displayName,
-      uid: userId,
-      email: firebase.auth().currentUser.email,
-      verified: firebase.auth().currentUser.emailVerified,
-      vText: "Not Verified",
-      vCol: "red",
-    }
+    this.userId = user.uid;
+    this.state = {};
+    userRef = firebase.database().ref('users/' + this.userId);
+    userRef.once('value').then((snapshot) => {
+      this.setState(snapshot.val())
+    })
+    this.displayName = firebase.auth().currentUser.displayName;
+      this.email = firebase.auth().currentUser.email;
+      this.verified = firebase.auth().currentUser.emailVerified;
+      this.vText = "Not Verified";
+      this.vCol = "red";
   }
-  if (this.state.verified) {
-    this.state.vText = "Verified";
-    this.state.vCol = "green"
+  if (this.verified && this.state.referralVerfied) {
+    this.vText = "Verified";
+    this.vCol = "green"
   }
 
   signOut = () => {
@@ -61,8 +63,9 @@ function SettingsPage({navigation}) {
           />
           <SettingsList.Item
             title='Verification'
-            titleInfo={this.state.vText}
-            titleInfoStyle={styles.titleInfoStyle, {color:this.state.vCol}}
+            titleInfo={this.vText}
+            titleInfoStyle={styles.titleInfoStyle, {color:this.vCol}}
+            onPress={() => navigation.navigate("Verify")}
           />
           <SettingsList.Header headerStyle={{marginTop:15}}/>
           <SettingsList.Item

@@ -1,172 +1,114 @@
-import React, { Component } from 'react';
-import { StyleSheet,
-         View,
-         Text,
-         Button,
-         Image,
-         StatusBar,
-         Platform,
-         RefreshControl,
-         Switch } from 'react-native';
+import React, { Component, useState, useEffect } from 'react';
+import { View, TextInput, Text } from 'react-native';
 import firebase from '../database/firebase';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import SettingsList from 'react-native-settings-list';
-import { ThemeConsumer } from 'react-native-elements';
-
-function PartyScreen() {
-  return (
-    <View style={styles.container}>
-      <Text>Party Map</Text>
-    </View>
-  );
-}
-
-function FriendsScreen() {
-  return (
-    <View style={styles.container}>
-      <Text>Friends</Text>
-    </View>
-  );
-}
-
-function SettingsPage() {
-  if (firebase.auth().currentUser) {
-    userId = firebase.auth().currentUser.uid;
-    this.state = { 
-      displayName: firebase.auth().currentUser.displayName,
-      uid: userId,
-      email: firebase.auth().currentUser.email,
-      verified: firebase.auth().currentUser.emailVerified,
-      vText: "Not Verified",
-      vCol: "red",
-      firstName: firebase.database().ref('users/' + userId + '/firstName').on('value', function (snapshot) {snapshot.val()}),
-      lastName: firebase.database().ref('users/' + userId + '/lastName').on('value', function (snapshot) {snapshot.val()}),
-      dob: firebase.database().ref('users/' + userId + '/dob').on('value', function (snapshot) {snapshot.val()}),
-      year: firebase.database().ref('users/' + userId + '/year').on('value', function (snapshot) {snapshot.val()}),
-      house: firebase.database().ref('users/' + userId + '/house').on('value', function (snapshot) {snapshot.val()}),
-      gender: firebase.database().ref('users/' + userId + '/gender').on('value', function (snapshot) {snapshot.val()})
-    }
-  }
-  if (this.state.verified) {
-    this.state.vText = "Verified";
-    this.state.vCol = "green"
-  }
-
-  signOut = () => {
-      firebase.auth().signOut().then((res) => {
-        console.log(res)
-        console.log('User logged-out successfully!')
-        this.state = {}
-        this.props.navigation.navigate('Home')
+  
+function Verify() {
+    const userId = firebase.auth().currentUser.uid;
+    const emailVerified = firebase.auth().currentUser.emailVerified;
+    const [emailVerifiedText, setEmailVerifiedText] = useState("Not Verified");
+    const [emailVerifiedColor, setEmailVerifiedColor] = useState("red");
+    const [referralVerifiedText, setReferralVerifiedText] = useState("Not Verified");
+    const [referralVerifiedColor, setReferralVerifiedColor] = useState("red");
+    const [referralChangeEnabled, setReferralChangeEnabled] = useState(true);
+    const [sendVerificationText, setSendVerificationText] = useState("");
+    const [sendVerificationColor, setSendVerificationColor] = useState("black");
+    const [referral, setReferral] = useState("")
+    const [referralVerified, setReferralVerified] = useState(false)
+    if (firebase.auth().currentUser) {
+      const userRef = firebase.database().ref('users/' + this.userId);
+      userRef.once('value').then((snapshot) => {
+        const values = snapshot.val()
+        setReferral(values.referral)
+        setReferralVerified(values.referralVerified)
       })
-      .catch(error => this.state = { errorMessage: error.message })
+    }
+
+    useEffect(() => {
+      if (emailVerified) {
+        setEmailVerifiedText("Verified");
+        setEmailVerifiedColor("green");
+        setSendVerificationColor("grey");
+      }
+      else {
+        setEmailVerifiedText("Not Verified");
+        setEmailVerifiedColor("red");
+        setSendVerificationColor("black");
+      }
+      if (referralVerified) {
+        setReferralVerifiedText("Verified");
+        setReferralVerifiedColor("green");
+        setReferralChangeEnabled(false);
+      }
+      else {
+        setReferralVerifiedText("Not Verified");
+        setReferralVerifiedColor("red");
+        setReferralChangeEnabled(true)
+      }
+    });
+  
+    changeReferral = (ref) => {
+      const users = firebase.database().ref('users/')
+      setReferral(ref)
+      users.once("value").then(snapshot => {
+        snapshot.forEach(item => {
+          if (item.key == ref && ref != userId){
+            setReferralVerified(true)
+          }
+        })
+      })
+      firebase.database().ref('users/' + userId).update({
+        referral: referral,
+        referralVerified: referralVerified
+      })
+    }
+
+    sendEmailVerification = () => {
+      if (!emailVerified){
+        firebase.auth().currentUser.sendEmailVerification();
+        setSendVerificationColor("grey");
+        setSendVerificationText("Verification email sent!");
+      }
     }
   
   return (
     <View style={{backgroundColor:'#EFEFF4',flex:1}}>
-        <SettingsList borderColor='#c8c7cc' defaultItemSize={50}>
-          <SettingsList.Header headerStyle={{marginTop:15}}/>
-          <SettingsList.Item
-            title='Profile'
-          />
-          <SettingsList.Item
-            title='Verification'
-            titleInfo={this.state.vText}
-            titleInfoStyle={styles.titleInfoStyle, {color:this.state.vCol}}
-          />
-          <SettingsList.Header headerStyle={{marginTop:15}}/>
-          <SettingsList.Item
-            title='Logout'
-            hasNavArrow={false}
-            onPress={() => signOut()}
-          />
-          <SettingsList.Item
-            title='Delete Account'
-            hasNavArrow={false}
-          />
-        </SettingsList>
+    <SettingsList borderColor='#c8c7cc' defaultItemSize={50}>
+      <SettingsList.Header/>
+      <SettingsList.Item
+        title='Email'
+        titleInfo={emailVerifiedText}
+        titleInfoStyle={{color: emailVerifiedColor}}
+        hasNavArrow={false}
+      />
+      <SettingsList.Item
+        title='Send Verification Email'
+        titleStyle={{color: sendVerificationColor}}
+        hasNavArrow={false}
+        onPress={sendEmailVerification()}
+      />
+      <SettingsList.Header headerText={sendVerificationText} headerStyle = {{color: "green"}}/>
+      <SettingsList.Item
+        title='Referral'
+        titleInfo={referralVerifiedText}
+        titleInfoStyle={{color: referralVerifiedColor}}
+        hasNavArrow={false}
+      />
+      <SettingsList.Item
+        title='Enter Code'
+        arrowIcon={<View flexDirection="row">
+                    <TextInput defaultValue={referral} onChangeText={(val) => changeReferral(val)} editable={referralChangeEnabled}/>
+                    <Text>  </Text>
+                   </View>}
+      />
+    </SettingsList>
     </View>
-  )
-}
-
-const Tab = createBottomTabNavigator();
-
-function MyTabs() {
-  return (
-    <Tab.Navigator
-        screenOptions={({ route }) => ({
-          tabBarIcon: ({ focused, color, size }) => {
-            if (route.name === 'Party') {
-              return <Image source={require('../assets/Favorites-2/icons8-champagne-500.png')}
-                            style={{width: size, height: size}}
-                            focused={focused} />
-            } else if (route.name === 'Settings') {
-              return <Image source={require('../assets/Favorites-2/icons8-settings-500.png')}
-                            style={{width: size, height: size}}
-                            focused={focused} />
-            } else if (route.name === 'Friends') {
-              return <Image source={require('../assets/Favorites-2/icons8-contacts-500.png')}
-                            style={{width: size, height: size}}
-                            focused={focused} />
-            }
-            // You can return any component that you like here!
-            
-          },
-        })}
-        tabBarOptions={{
-          activeTintColor: 'blue',
-          inactiveTintColor: 'gray',
-        }}
-      >
-      <Tab.Screen name="Party" component={PartyScreen} />
-      <Tab.Screen name="Friends" component={FriendsScreen} />
-      <Tab.Screen name="Settings" component={SettingsPage} />
-    </Tab.Navigator>
   );
 }
-  
-export default class Dashboard extends Component {
-  constructor() {
-    super();
-    this.state = { 
-      uid: ''
-    }
-  }
 
-  signOut = () => {
-    firebase.auth().signOut().then(() => {
-      this.props.navigation.navigate('Login')
-    })
-    .catch(error => this.setState({ errorMessage: error.message }))
-  } 
-  
-  verifyEmail = () => {
-    firebase.auth().currentUser.sendEmailVerification().then(function() {
-      // Email sent.
-    }).catch(function(error) {
-      // An error happened.
-    })
-  }  
-
-  render() {
-    
-    return (
-      <MyTabs />
-    );
-  }
+Verify.navigationOptions = {
+  title: 'Verification Settings',
+  headerLeft: (navigation) => (<GoToButton screenName="Dashboard"/>)
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    display: "flex",
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 50,
-    backgroundColor: '#EFEFF4'
-  },
-  textStyle: {
-    fontSize: 15,
-    marginBottom: 20
-  }
-});
+export default Verify;
